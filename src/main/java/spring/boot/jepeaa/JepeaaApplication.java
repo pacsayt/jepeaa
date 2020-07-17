@@ -1,26 +1,28 @@
 package spring.boot.jepeaa;
 
-import JpaUtil.QueryUtil;
-import org.hibernate.procedure.internal.Util;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import spring.boot.jepeaa.jpautil.QueryUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import spring.boot.jepeaa.enumtype.PersistableEnum;
+import spring.boot.jepeaa.enumtype.PersistableEnumEntity;
 import spring.boot.jepeaa.jpakickstart.Person;
-import spring.boot.jepeaa.music.Artist;
-import spring.boot.jepeaa.music.Song;
+import spring.boot.jepeaa.manytoone.ManyToOneExample;
+import spring.boot.jepeaa.onetomany.OneToManyExample;
+import spring.boot.jepeaa.onetoone.OneToOneExample;
 
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
+ * BEST JPA TUTORIAL :
+ * https://www.logicbig.com/tutorials/java-ee-tutorial/jpa.html
+ *
+ * Nice :
  * Spring Boot + Spring data JPA
  * https://mkyong.com/spring-boot/spring-boot-spring-data-jpa/
  *
@@ -33,27 +35,100 @@ public class JepeaaApplication implements CommandLineRunner
 
 	public static void main(String[] args)
 	{
-		System.out.println( "JepeaaApplication::main() SpringApplication.run() BEFORE");
+		System.out.println( "JepeaaApplication::main() BEGIN ====================");
 		ConfigurableApplicationContext configurableApplicationContext = SpringApplication.run(JepeaaApplication.class, args); // Just not to forget that this function returns the context
-		System.out.println( "JepeaaApplication::main() SpringApplication.run() AFTER");
+		System.out.println( "JepeaaApplication::main() END ====================");
 	}
 
 	@Override
 	public void run( String... args) throws Exception
 	{
+		System.out.println( "JepeaaApplication::run() BEGIN ********************");
 //		runSpringBootJpa( args);
 //		runJpa( args);
 //		runPersistenceKickstart( args);
-		runPersistingJavaEnum( args);
+//		runPersistingJavaEnum( args);
+//		runOneToOneExample( args);
+//		runManyToOneExample( args);
+		runOneToManyExample( args);
+		
+		System.out.println( "JepeaaApplication::run() END ********************");
 	}
 
+	private void runOneToManyExample( String... args)
+	{
+		System.out.println( "JepeaaApplication::runOneToManyExample() ********************");
+		
+		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("testPersistenceUnit");
+
+		showGeneratedTables( entityManagerFactory);
+
+		OneToManyExample.run( entityManagerFactory);
+
+		entityManagerFactory.close();
+	}
+	
+	private void runManyToOneExample( String... args)
+	{
+		System.out.println( "JepeaaApplication::runManyToOneExample() ********************");
+
+		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("testPersistenceUnit");
+
+		showGeneratedTables( entityManagerFactory);
+
+		ManyToOneExample.run( entityManagerFactory);
+
+		entityManagerFactory.close();
+	}
+
+
+  private void runOneToOneExample( String... args)
+	{
+		System.out.println( "JepeaaApplication::runOneToOneExample() ********************");
+
+		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("testPersistenceUnit");
+
+		showGeneratedTables( entityManagerFactory);
+
+		OneToOneExample.run( entityManagerFactory);
+
+		entityManagerFactory.close();
+	}
 	/**
 	 * JPA - Persisting Java Enum
 	 * https://www.logicbig.com/tutorials/java-ee-tutorial/jpa/persisting-enum.html
 	 */
 	private void runPersistingJavaEnum( String... args)
 	{
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("test1");
+		System.out.println( "JepeaaApplication::runPersistingJavaEnum() ********************");
+
+		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("testPersistenceUnit");
+
+		showGeneratedTables( entityManagerFactory);
+
+		persistPersistableEnumEntity( entityManagerFactory, 1, PersistableEnum.Value1);
+		persistPersistableEnumEntity( entityManagerFactory, 2, PersistableEnum.Value2);
+		persistPersistableEnumEntity( entityManagerFactory, 3, PersistableEnum.Value3);
+
+		EntityManager entityManager = entityManagerFactory.createEntityManager();
+		QueryUtil.typedQueryWithJPQL( entityManager, PersistableEnumEntity.class);
+
+		showGeneratedTables( entityManagerFactory); // Same result as before
+
+		entityManagerFactory.close();
+	}
+
+	private static void persistPersistableEnumEntity( EntityManagerFactory entityManagerFactory, int id, PersistableEnum persistableEnum)
+	{
+		PersistableEnumEntity persistableEnumEntity = new PersistableEnumEntity( id, persistableEnum);
+		EntityManager entityManager = entityManagerFactory.createEntityManager();
+
+		entityManager.getTransaction().begin();
+
+		entityManager.persist( persistableEnumEntity);
+		entityManager.getTransaction().commit();
+
+		entityManager.close();
 	}
 
 	private static void showGeneratedTables( EntityManagerFactory entityManagerFactory)
@@ -63,7 +138,6 @@ public class JepeaaApplication implements CommandLineRunner
 		entityManager.close();
 	}
 
-
 	/**
 	 * JPA Kickstart Example
 	 * https://www.logicbig.com/tutorials/java-ee-tutorial/jpa/jpa-kickstart.html
@@ -71,6 +145,8 @@ public class JepeaaApplication implements CommandLineRunner
 	 */
 	private void runPersistenceKickstart( String... args)
 	{
+		System.out.println( "JepeaaApplication::runPersistenceKickstart() ********************");
+
 		EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("testPersistenceUnit");
 		// EntityManager - not thread safe : will throw exceptions even if threads are synchronized not to access db at the same time
 		EntityManager entityManager = entityManagerFactory.createEntityManager();
@@ -89,9 +165,9 @@ public class JepeaaApplication implements CommandLineRunner
 
 		findObjectById( entityManager);
 		queryWithJPQL( entityManager);
-		typedQueryWithJPQL( entityManager);
+		QueryUtil.typedQueryWithJPQL( entityManager, Person.class);
 		criteriaQuery( entityManager);
-		QueryUtil.queryNative( entityManager); // queryNative( entityManager);
+		QueryUtil.nativeQuery( entityManager, "select * from Person"); // queryNative( entityManager);
 
 		// When the application has finished using the entity manager factory, and/or at application shutdown,
 		// the application should close the entity manager factory by calling emf.close().
@@ -115,12 +191,6 @@ public class JepeaaApplication implements CommandLineRunner
 		System.out.println( resultList1);
 	}
 
-	private static void typedQueryWithJPQL( EntityManager entityManager)
-	{
-		System.out.println( "----\nTyped Querying using JPQL");
-		TypedQuery<Person> q = entityManager.createQuery("select t from Person t", Person.class);
-		System.out.println(q.getResultList());
-	}
 
 	private static void criteriaQuery( EntityManager entityManager)
 	{
